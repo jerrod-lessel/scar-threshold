@@ -2,7 +2,7 @@
 
 Full method, validation and results for **Scar Threshold**. The short version, with the live map, is in [README.md](README.md).
 
-**Status:** complete pipeline, run end to end on three 2024 fires (Bridge, Line and Borel) through a single configuration-driven notebook. Model implementation cross-validated against the official USGS package on every fire. 184 tests passing.
+**Status:** complete pipeline, run end to end on three 2024 fires (Bridge, Line, and Borel) through a single configuration-driven notebook. Model implementation cross-validated against the official USGS package on every fire. 184 tests passing.
 
 ---
 
