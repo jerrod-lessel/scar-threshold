@@ -24,7 +24,7 @@ The model is not the contribution. USGS publishes both the equations and a refer
 
 **One notebook, any fire.** Everything fire-specific lives in one configuration block: the name, rough centre and acreage from the incident page, and two date windows. The notebook suggests the satellite scenes, runs through to the web map, and checks itself against earlier validated runs. Rerunning Bridge and Line through it reproduces the originals basin for basin, to floating point precision.
 
-## The fires
+## The fires (so far...)
 
 | | Bridge | Line | Borel |
 |---|---|---|---|
