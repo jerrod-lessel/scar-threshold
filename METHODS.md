@@ -2,7 +2,7 @@
 
 Full method, validation and results for **Scar Threshold**. The short version, with the live map, is in [README.md](README.md).
 
-**Status:** complete pipeline, run end to end on two 2024 fires (Bridge and Line) through a single configuration-driven notebook. Model implementation cross-validated against the official USGS package. 184 tests passing.
+**Status:** complete pipeline, run end to end on three 2024 fires (Bridge, Line and Borel) through a single configuration-driven notebook. Model implementation cross-validated against the official USGS package on every fire. 184 tests passing.
 
 ---
 
@@ -123,25 +123,100 @@ The single basin below the envelope (basin 183) is not a meaningful under-warnin
 
 **Not yet done for Line:** the comparison against the published USGS assessment. It exists in the same ScienceBase 2024 collection as Bridge's.
 
-## Results across both fires
+## Results: the 2024 Borel Fire
 
-| | Bridge | Line |
-|---|---|---|
-| Basins | 237 | 171 |
-| dNBR vs BAER moderate-or-high | 76.5% vs 58% | 85.0% vs 70.9% |
-| Burn area 23 degrees or steeper | 83.0% | 71.0% |
-| Median basin size | 0.38 km² | 0.53 km² |
-| Median basin threshold | 16.4 mm/hr | 19.0 mm/hr |
-| Median parameter spread | 1.70 mm/hr | 2.23 mm/hr |
-| Pipeline over-warns (BAER above envelope) | 87 basins (37%) | 24 basins (14%) |
-| Pipeline under-warns (BAER below envelope) | 0 | 1, by 0.4 mm/hr at 66 mm/hr |
-| Never-High basins confirmed not High by BAER | 80 of 80 | 59 of 59 |
+The Borel Fire started on 24 July 2024 along State Route 178 east of Democrat Springs, burned south of Lake Isabella through the Kern River valley and the country around Havilah, and reached a final size of 59,288 acres on Sequoia National Forest land in Kern County. It was chosen as the third fire to break the pattern the first two share. Bridge and Line are both September fires in neighbouring Transverse Range mountains, mostly chaparral, mostly steep. Borel is a July fire in the southern Sierra Nevada foothills, through oak woodland, annual grass and mixed chaparral, and it is the first fire in this set where most of the burn is not on steep ground. Its published size is within 5% of Bridge's, so basin counts stay comparable and size is not a confounding variable.
 
-Across two 2024 southern California fires, the pipeline over-warns relative to field-validated BAER severity (37% of basins on Bridge, 14% on Line) and does not meaningfully under-warn. No basin the pipeline rates never-High is rated High by BAER on either fire.
+**Inputs**
 
-The direction held on both fires; the size did not. Line over-warns in about a third as many basins. That fits Line's mix of grass, chaparral and timber against Bridge's mostly chaparral, since chaparral is where satellite severity and soil severity diverge most, but two fires do not establish that explanation.
+| | Value |
+|---|---|
+| Perimeter | CAL FIRE FRAP, 59,288 acres, 239.9 km² |
+| Pre-fire scene | Sentinel-2B, 21 July 2024, no cloud over the burn |
+| Post-fire scene | Sentinel-2B, 20 August 2024, no cloud over the burn |
+| Tiles | 11SLV, single tile covering the whole perimeter |
+| dNBR offset correction | -32.82, from 576,198 unburned pixels |
+| Elevation | USGS 3DEP 10 m, 246 m to 2,574 m |
+| Soil | USDA STATSGO, 5 map units, KF 0.224 to 0.333, basin S 0.230 to 0.287 |
 
-The percentages are shares of basins, not of burned area. Two fires from the same year in neighbouring mountain ranges show a pattern, not a rule.
+**Choosing the post-fire scene.** Borel is the mirror image of the Line problem. It was not fully contained until 15 September, but it stopped growing around 1 August: acreage changes after that date are attributed to revisions of the estimated area rather than to new ground burning. Waiting for containment would have cost six weeks of unnecessary vegetation change. The post-fire search window was opened on 10 August instead, nine days past the last growth, which leaves margin for the smoke the scene classification cannot see while crews were still working flare-ups inside the perimeter. The notebook suggested 10 August, the earliest clean date in the window; 20 August was used instead, on the same satellite as the pre-fire scene and further clear of the suppression period. The pre-fire scene is 21 July, three days before ignition.
+
+**The offset correction earned its keep here.** On Bridge and Line the correction was around -5 dNBR, small enough that skipping it would have changed very little. On Borel it is -32.82, more than six times larger, because the scene pair straddles a month of high summer rather than a dry-season gap between similar sun angles. That is 12% of the way to the 270 moderate/high break. Unburned ground in the ring reads as very slightly greener on 20 August than on 21 July, and without the correction that bias would have been carried into every basin. After correction the ring mean is -0.00, which is the check the step exists to pass.
+
+**What the terrain and imagery say**
+
+- 70.6% of the burn area is moderate or high severity by dNBR (53.1% moderate, 17.5% high)
+- 51.7% of the burn area is 23 degrees or steeper
+- Mean slope across the whole extent is 19.5 degrees
+
+Borel is the least steep of the three fires by a wide margin: barely half its burn area clears the model's 23 degree threshold, against 71.0% on Line and 83.0% on Bridge. The steep ground is concentrated in the Kern River canyon walls along the north and east edges, while the interior is comparatively gentle. It is also the least severely burned by dNBR, with only 17.5% of the burn area in the high class against 47.2% on Line.
+
+**Basins**
+
+239 drainage basins touching the fire, median size 0.426 km², all inside the model's calibration range. 418 basins were delineated over the full extent, of which 239 touch the burn and 141 sit entirely inside it. Together they cover 90.7% of the burn area, against 87.6% on Bridge and 91.5% on Line. As on the other two fires, the uncovered 9.3% is trunk canyon floors above the 8 km² ceiling, too large to serve as source basins.
+
+Severity covers all 239 basins completely, with a worst-case per-basin coverage of 1.000. Borel fits inside a single Sentinel-2 tile, so there is no mosaic seam and no partially covered basin to flag.
+
+Conditioning altered 0.409% of cells, with a deepest fill of 36.9 m. The maximum flow accumulation over the extent is 578.8 km², which is the Kern River itself passing through the window rather than anything inside the fire.
+
+**Hazard**
+
+| Rainfall (15 min) | Basins at High likelihood |
+|---|---|
+| 12 mm/hr | 0.0% |
+| 16 mm/hr | 0.8% |
+| 20 mm/hr | 11.3% |
+| 24 mm/hr | 29.3% |
+| 32 mm/hr | 60.3% |
+| 40 mm/hr | 78.2% |
+
+Median basin needs **26.3 mm/hr** of 15 minute rainfall to reach a 50% chance of a debris flow, against 19.0 on Line and 16.4 on Bridge. The range runs from 13.5 to 84.2 mm/hr.
+
+That shift is the terrain, and it is the model behaving as it should. T is the fraction of a basin that is both steep and badly burned. Cutting the steep share of the burn from 83% to 52% cuts T, and a lower T means more rain is needed to reach the same likelihood. Borel is the first fire in this set where the median basin is safe at the 24 mm/hr design storm rather than exposed by it.
+
+The threshold distribution also differs in shape. Bridge has a median of 16.4 against a mean of 29.0, with a standard deviation of 22.6: a tight cluster of dangerous canyons and a long tail of edge basins. Borel is much closer to symmetric, with a median of 26.3 against a mean of 31.3. Bridge is bimodal terrain, steep burned canyons and gentle edges with little in between; Borel is a continuum.
+
+**Sensitivity.** Across the same six parameter combinations, the median basin's threshold sits between 24.2 and 31.1 mm/hr, a spread of 4.99 mm/hr. That is more than double Line's and nearly three times Bridge's. At 24 mm/hr, 45 basins are High under every combination, 37 flip, and 157 are never High.
+
+The wider envelope has a specific cause, and it is not the soil. S on this fire spans 0.230 to 0.287 across five map units, with a standard deviation of 0.007, so the two soil rules move very little. The severity threshold does the work instead. Borel's burned dNBR distribution is broad and flat, with 5th to 95th percentiles from 49 to 835 and a large amount of mass sitting near the 270 break, so moving that break from 200 to 270 to 350 moves the moderate-or-high share of basin area from 59.2% to 51.4% to 41.8% and drags T with it. On Bridge and Line the burned distributions are more separated, and the same threshold shifts move less ground. On this fire the uncertainty is dominated by where the severity break is drawn.
+
+**BAER anchor.** The BAER map covers 99.8% of the perimeter. Inside it, the map rates 37.8% moderate and 8.9% high, 46.6% combined, against 70.6% moderate-or-high from this project's dNBR. That 24 point gap is the largest of the three fires. Nearly half the fire area (48.7%) is BAER class 2, low: light fuels that burned fast and dropped NBR sharply without cooking the soil underneath.
+
+Substituting the BAER map, clipped to the perimeter, puts 199 of 239 basin thresholds inside the parameter envelope, 40 above it and **none below it**. All 157 never-High basins are confirmed not High by BAER, with no exceptions.
+
+The perimeter clip removed 245 cells, 0.02 km², of BAER moderate-or-high severity from inside basins. That is negligible, and it is a useful negative result: Borel sits within a few kilometres of the 2021 French Fire scar and shared a season with the Trout, Long and Acorn fires on the same forest, so the neighbouring-scar contamination seen on Line was expected here and did not appear. The rule is cheap and correct to keep, but it is not always load bearing.
+
+## Results across three fires
+
+| | Bridge | Line | Borel |
+|---|---|---|---|
+| Ignited | 8 September 2024 | 5 September 2024 | 24 July 2024 |
+| Where | San Gabriel Mountains | San Bernardino Mountains | southern Sierra foothills, Kern County |
+| Size | 56,281 acres | 43,978 acres | 59,288 acres |
+| Basins | 237 | 171 | 239 |
+| dNBR vs BAER moderate-or-high | 76.5% vs 58% | 85.0% vs 70.9% | 70.6% vs 46.6% |
+| Burn area 23 degrees or steeper | 83.0% | 71.0% | 51.7% |
+| Median basin size | 0.38 km² | 0.53 km² | 0.426 km² |
+| Burn area inside some basin | 87.6% | 91.5% | 90.7% |
+| Median basin threshold | 16.4 mm/hr | 19.0 mm/hr | 26.3 mm/hr |
+| Median parameter spread | 1.70 mm/hr | 2.23 mm/hr | 4.99 mm/hr |
+| Pipeline over-warns (BAER above envelope) | 87 basins (37%) | 24 basins (14%) | 40 basins (17%) |
+| Pipeline under-warns (BAER below envelope) | 0 | 1, by 0.4 mm/hr at 66 mm/hr | 0 |
+| Never-High basins confirmed not High by BAER | 80 of 80 | 59 of 59 | 157 of 157 |
+
+Across three 2024 California fires, the pipeline over-warns relative to field-validated BAER severity (37% of basins on Bridge, 14% on Line, 17% on Borel) and does not meaningfully under-warn. No basin the pipeline rates never-High is rated High by BAER on any of the three fires, in 296 of 296 cases.
+
+**The direction is the result. The size is not.** All three fires over-warn and none under-warns, and that held when the third fire was chosen specifically to be unlike the first two: different range, different season, different fuels, and half the steep ground. But the share of basins affected ranges from 14% to 37% with no clean explanation, and the third fire weakened rather than strengthened the reading two fires suggested.
+
+That reading was that the over-warning tracks the gap between satellite and field severity, which would make it largest in chaparral. Borel has the largest severity gap of the three, 24 points against Bridge's 18.5 and Line's 14.1, and the second smallest over-warning share. So the gap does not predict the over-warning rate on its own.
+
+Two things are likely to be in the way, and neither has been tested.
+
+**Steepness limits how much the severity gap can matter.** T requires ground to be steep *and* badly burned. On Borel only half the burn is steep, so misclassifying severity on the gentle half cannot move T much: the terrain term is already floored there. Bridge has the opposite arrangement, with five sixths of the burn steep enough that every severity misclassification propagates.
+
+**The over-warning share is not measured against a fixed yardstick.** A basin counts as over-warned when the BAER threshold falls above the whole six-run parameter envelope, so a fire with a wider envelope will catch more anchors inside it and count fewer as over-warnings. Bridge has the narrowest envelope, 1.70 mm/hr, and the highest share. Borel has the widest, 4.99 mm/hr, and 83.3% of its anchors land inside. Comparing the shares across fires therefore mixes the real disagreement with the width of the envelope it is measured against, and separating the two would need a fixed-width criterion the current analysis does not define.
+
+The percentages are shares of basins, not of burned area. Three fires from the same year, all in California, show a pattern rather than a rule.
 
 ## The model
 
@@ -201,7 +276,7 @@ The claims here are checked in four places, and the distinction between them mat
 
 ### The model implementation, against the reference package
 
-Given identical T, F, S and R values, `m1.py` produces bit for bit identical results to `pfdf.models.staley2017`, the official USGS implementation. That was checked across 1,422 forward evaluations (237 basins at 6 design storms) and 237 inverse solves. Maximum absolute difference: 0.000e+00. The same check runs inside the generalized notebook for every fire.
+Given identical T, F, S and R values, `m1.py` produces bit for bit identical results to `pfdf.models.staley2017`, the official USGS implementation. That was checked across 1,422 forward evaluations (237 basins at 6 design storms) and 237 inverse solves on Bridge. Maximum absolute difference: 0.000e+00. The same check runs inside the generalized notebook for every fire and has returned the same result on all three: 1,026 forward and 171 inverse on Line, 1,434 forward and 239 inverse on Borel.
 
 The comparison was then deliberately broken to confirm it is capable of failing. Swapping two coefficients moves the result by 1.3e-01, passing intensity where accumulation was expected moves it by 8.3e-01, and perturbing a single coefficient by 1% moves it by 4.0e-03. So the exact agreement is a real result, not a comparison that always returns zero. The captured values are frozen in `tests/test_m1_pfdf.py`, so the agreement holds as a regression test with no network access and no pfdf installed.
 
@@ -209,7 +284,7 @@ The comparison was then deliberately broken to confirm it is capable of failing.
 
 `05_generalized_pipeline.ipynb` replaces the Bridge-specific notebooks with one that reads everything from a configuration block. Its last cell compares a run against a previous validated one. Rerunning Bridge through it reproduces the original Bridge run on all 30 checks: the headline figures in this document, and every one of the 237 basins at full precision, with a largest difference of 4e-14 mm/hr in any threshold, which is floating point rounding. Rerunning Line reproduces an earlier Line run on all 19 checks across its 171 basins.
 
-That matters for interpreting the second fire. The version that reads everything from configuration gives the same answer as the version with Bridge hardcoded throughout, so the differences between Bridge and Line come from the fires, not from the code.
+That matters for interpreting the later fires. The version that reads everything from configuration gives the same answer as the version with Bridge hardcoded throughout, so the differences between the fires come from the fires, not from the code. Borel was run on the generalized notebook from the start and has no earlier run to regress against, which the final cell reports rather than passing silently.
 
 ### The model implementation, against USGS published output
 
@@ -280,7 +355,7 @@ The full analysis is in `03_sensitivity_delineation.ipynb`.
 
 **Their assessment is not a stock reference either.** USGS notes that operational personnel may modify stream network delineation and model parameters for individual assessments. Their perimeter is also 221.3 km² against the 226.6 km² used here, and their assessment date is one day before this project's post-fire scene, so the two necessarily used different imagery.
 
-**The USGS comparison covers Bridge only.** Line has a published USGS assessment that has not yet been compared.
+**The USGS comparison covers Bridge only.** Line and Borel both have published USGS assessments that have not yet been compared.
 
 The full comparison is in `02b_usgs_comparison.ipynb`.
 
@@ -288,9 +363,9 @@ The full comparison is in `02b_usgs_comparison.ipynb`.
 
 **Burn severity from two satellite pictures.** Healthy vegetation reflects near infrared light strongly and shortwave infrared weakly. Burned ground does the opposite. The Normalised Burn Ratio combines those two bands into a single number, and subtracting the after picture from the before picture gives dNBR, which is a map of how much changed.
 
-Two pictures taken 40 days apart also differ for boring reasons: sun angle, atmosphere, slight seasonal change. So the pipeline looks at unburned land in a ring around the fire, where the answer should be zero, and measures what it actually says. Whatever that is, is the bias, and it gets subtracted from everything. On the Bridge Fire it came out at -5.05, which is tiny, mostly because both scenes came from the same satellite in the same dry season.
+Two pictures taken weeks apart also differ for boring reasons: sun angle, atmosphere, slight seasonal change. So the pipeline looks at unburned land in a ring around the fire, where the answer should be zero, and measures what it actually says. Whatever that is, is the bias, and it gets subtracted from everything. On the Bridge Fire it came out at -5.05, which is tiny, mostly because both scenes came from the same satellite in the same dry season. On Borel it came out at -32.82, over six times larger, because that scene pair straddles a month of high summer. The step matters more on some fires than others and cannot be skipped on the evidence of the easy ones.
 
-**Choosing the scenes.** For every candidate date in the search windows, the notebook measures how much of the perimeter the tiles cover and how much cloud and snow the Sentinel-2 scene classification shows inside the perimeter, rather than the whole-scene cloud figure, which can be high while the fire itself is clear. It then suggests the earliest clean post-fire date paired with the latest clean pre-fire date from the same satellite. A date set in the configuration always overrides the suggestion. The scene classification often misses smoke, so the dNBR map is still checked by eye, and the suggestion cannot know when a fire stopped growing (see the Line Fire results).
+**Choosing the scenes.** For every candidate date in the search windows, the notebook measures how much of the perimeter the tiles cover and how much cloud and snow the Sentinel-2 scene classification shows inside the perimeter, rather than the whole-scene cloud figure, which can be high while the fire itself is clear. It then suggests the earliest clean post-fire date paired with the latest clean pre-fire date from the same satellite. A date set in the configuration always overrides the suggestion. The scene classification often misses smoke, so the dNBR map is still checked by eye, and the suggestion cannot know when a fire stopped growing (see the Line Fire results) or when crews are still working flare-ups inside a contained perimeter (see Borel).
 
 **Slope from an elevation model.** Slope is computed with Horn's method, the same 3x3 kernel that GDAL and ArcGIS use, so the numbers are comparable to standard GIS output.
 
@@ -298,7 +373,7 @@ Two pictures taken 40 days apart also differ for boring reasons: sun angle, atmo
 
 So three steps run before routing. Fill the pits. Resolve the flats that filling creates, since a perfectly flat cell has no lowest neighbour either. Then assign every cell a direction to its steepest neighbour and count how many cells drain through each point.
 
-On the Bridge Fire, 0.79% of cells were altered by filling. The deepest fill was 74.7 m, which turned out to be San Gabriel Reservoir. A reservoir is a real closed depression and filling it is correct.
+On the Bridge Fire, 0.79% of cells were altered by filling. The deepest fill was 74.7 m, which turned out to be San Gabriel Reservoir. A reservoir is a real closed depression and filling it is correct. On Borel, 0.409% of cells were altered with a deepest fill of 36.9 m; the Isabella reservoir and flood basin sit inside the DEM window and are the obvious candidate, but that has not been confirmed.
 
 **Slope comes from the raw DEM, routing from the repaired one.** This is worth stating clearly because it is easy to get backwards. Filling deliberately changes elevations, which is right for routing and wrong for measurement. Computing slope on the filled surface would report gradients invented by the fill algorithm.
 
@@ -347,9 +422,9 @@ Note that the STATSGO spatial data lives in the `gsmmupolygon` table. The conven
 
 **Surface horizon only.** Post-fire rilling and dry ravel act on the surface, so deeper horizons are irrelevant to the process being modelled.
 
-**F is clamped at zero.** A negative basin mean dNBR means the basin looked slightly greener after the fire than before, which for basins that barely clip the perimeter is scene noise rather than negative burning. The model's fire term is a magnitude whose floor is "no burn". On the Bridge Fire this affected 19 of 237 basins, all with T below 0.02. The clamp happens in the driver and the raw value is kept alongside it, so it is visible in the output. The validation in `m1.py` was left strict.
+**F is clamped at zero.** A negative basin mean dNBR means the basin looked slightly greener after the fire than before, which for basins that barely clip the perimeter is scene noise rather than negative burning. The model's fire term is a magnitude whose floor is "no burn". On the Bridge Fire this affected 19 of 237 basins, all with T below 0.02; on Borel, 9 of 239, with a minimum raw F of -0.0245 and a maximum T of 0.015 among them. The clamp happens in the driver and the raw value is kept alongside it, so it is visible in the output. The validation in `m1.py` was left strict.
 
-**BAER anchor severity is clipped to the fire perimeter.** The BAER national mosaic shows every assessed fire in a region, without labelling which pixel belongs to which fire, and basins extend outside the perimeter to capture their full upstream area. Without the clip, an edge basin can pick up severity from a neighbouring, older fire. On Line, an older burn scar to the southeast sat inside several edge basins and produced 4 of 5 apparent under-warnings; one basin had 46% of its area in that scar. With the clip, those four disappear and the over-warning count does not change. On Bridge, which has no neighbouring scar in the mosaic, the clip removed 0.05 km² of BAER severity from inside basins and moved 18 thresholds by at most 0.2 mm/hr, with no basin changing its agreement class. dNBR is not clipped: it measures change between the two scene dates, so an old neighbouring scar reads as roughly zero change anyway.
+**BAER anchor severity is clipped to the fire perimeter.** The BAER national mosaic shows every assessed fire in a region, without labelling which pixel belongs to which fire, and basins extend outside the perimeter to capture their full upstream area. Without the clip, an edge basin can pick up severity from a neighbouring, older fire. On Line, an older burn scar to the southeast sat inside several edge basins and produced 4 of 5 apparent under-warnings; one basin had 46% of its area in that scar. With the clip, those four disappear and the over-warning count does not change. On Bridge the clip removed 0.05 km² of BAER severity from inside basins and moved 18 thresholds by at most 0.2 mm/hr, with no basin changing its agreement class. On Borel it removed 0.02 km², despite the 2021 French Fire scar and three same-season fires on the same forest sitting nearby in the mosaic. The rule is cheap and correct to keep, and it is load bearing on some fires and not on others. dNBR is not clipped: it measures change between the two scene dates, so an old neighbouring scar reads as roughly zero change anyway.
 
 **The perimeter search guards are built, not typed.** The configuration takes the fire's rough centre and published acreage from the incident page. The notebook builds a search box 0.3 degrees around the centre and accepts a perimeter between half and double the published area. These only decide whether a perimeter query result is trusted, and never change the results.
 
@@ -373,21 +448,23 @@ The model tests are described under validation above. The generalized notebook a
 
 **Vegetation change is not soil burn severity.** The 270 dNBR threshold used here classifies moderate and high severity from vegetation change. M1 was calibrated against soil burn severity, which USGS maps with BAER field teams. The two correlate but are not the same, and in chaparral they diverge in a known direction: the shrubs burn completely, giving very high dNBR, while the soil underneath may only be moderately affected. Thresholds of 200, 270 and 350 are run as a sensitivity axis, and BAER is substituted directly as an anchor.
 
-This has been measured rather than predicted. On Bridge, BAER published the field-validated soil burn severity as 51% moderate and 7% high, so 58% moderate-or-high, against the 76.5% produced here. On Line the figures are 70.9% against 85.0%. Substituting the Bridge raster drops the terrain variable from 0.670 to 0.471 and closes 24% of the difference with the USGS assessment. The overstatement is slope-independent, and it is largest in moderately burned basins: where the fire burned hardest, satellite dNBR and field soil severity agree, and where it burned patchily they diverge.
+This has been measured rather than predicted. On Bridge, BAER published the field-validated soil burn severity as 51% moderate and 7% high, so 58% moderate-or-high, against the 76.5% produced here. On Line the figures are 70.9% against 85.0%, and on Borel 46.6% against 70.6%. Substituting the Bridge raster drops the terrain variable from 0.670 to 0.471 and closes 24% of the difference with the USGS assessment. The overstatement is slope-independent, and it is largest in moderately burned basins: where the fire burned hardest, satellite dNBR and field soil severity agree, and where it burned patchily they diverge. Borel shows the same mechanism in a different fuel: nearly half its burn area is BAER class 2, low, which is light grass and oak woodland that burned fast enough to drop NBR sharply without heating the soil.
 
 The comparison also narrows what is at issue. On Bridge, their F, which is mean catchment dNBR, agrees with this project's at r = 0.965, so the two pipelines measure dNBR consistently. The gap is in the classification applied to it, not in the measurement.
 
-**Basins cover 87.6% (Bridge) and 91.5% (Line) of the burn area, not all of it.** Trunk canyons with more than 8 km² of contributing area are outside the model's calibration range and cannot serve as source basins. Those unassigned valley floors are exactly where debris flows travel and where damage occurs, so the map describes where flows initiate rather than where they end up.
+**Basins cover 87.6% (Bridge), 91.5% (Line) and 90.7% (Borel) of the burn area, not all of it.** Trunk canyons with more than 8 km² of contributing area are outside the model's calibration range and cannot serve as source basins. Those unassigned valley floors are exactly where debris flows travel and where damage occurs, so the map describes where flows initiate rather than where they end up.
 
-**S barely varies.** STATSGO map units are 1 to 10 km² against a median basin of 0.38 km², so most basins sit inside a single map unit. Across the entire Bridge Fire, S spans 0.242 to 0.339, and across Line only 0.239 to 0.263. Its coefficient is the largest in the model, but with that little spread it acts closer to a constant offset than a discriminator. Almost all the between-basin variation in the results comes from T.
+**S barely varies.** STATSGO map units are 1 to 10 km² against a median basin of 0.38 km², so most basins sit inside a single map unit. Across the entire Bridge Fire, S spans 0.242 to 0.339, across Line 0.239 to 0.263, and across Borel 0.230 to 0.287 with a standard deviation of 0.007. Its coefficient is the largest in the model, but with that little spread it acts closer to a constant offset than a discriminator. Almost all the between-basin variation in the results comes from T. On Borel this is visible in the sensitivity analysis: the two soil rules move the median threshold by about 2 mm/hr while the three severity thresholds move it by nearly 5.
 
 **The ingest is compared but not fully explained.** See the validation section. It agrees with the USGS assessment on spatial pattern and on dNBR, and differs systematically on terrain and soil. The terrain difference is not separated from the basin size difference, and the soil aggregation rule is inferred from a distribution match rather than identified.
 
 **Likelihood only.** The Gartner (2014) volume model and the combined hazard classification are not implemented, so this says how likely a debris flow is, not how big.
 
-**Two fires, one scene pair each.** Both are 2024 fires in neighbouring southern California ranges. Scene choice is not yet a sensitivity axis. The over-warning found against BAER held in direction on both fires but was about a third as frequent on Line, which is consistent with, but does not show, a dependence on fuel type. A fire in different fuels, such as the 2024 Park Fire in northern California mixed conifer and oak, is what would test that.
+**Three fires, one scene pair each.** All three are 2024 California fires. Scene choice is not yet a sensitivity axis. The over-warning found against BAER held in direction on all three, including on a fire chosen to differ in range, season, fuels and steepness, but its size ranges from 14% to 37% of basins with no identified cause. The reading that two fires suggested, that the over-warning tracks the satellite-versus-field severity gap and is therefore a chaparral effect, does not survive the third: Borel has the largest severity gap and a middling over-warning share. See the three-fire results section for the two untested explanations.
 
-**The two-fire percentages are shares of basins.** Basins differ in size, so "37% of basins" is not "37% of burned area".
+**The over-warning shares are not measured against a fixed yardstick.** A basin counts as over-warned when its BAER threshold falls above the whole six-run parameter envelope, so the count depends on how wide that envelope is, which varies by a factor of three across the three fires. The shares are therefore comparable in direction but not in magnitude.
+
+**The percentages are shares of basins.** Basins differ in size, so "37% of basins" is not "37% of burned area".
 
 **Basin coverage of the burn depends on delineation scale.** The Bridge 87.6% figure is for the 0.1 km² minimum. At 0.02 km² it rises to 93.7%, because fewer trunk channels exceed the 8 km² ceiling. The uncovered ground is a consequence of the scale chosen rather than a fixed property of the method.
 
@@ -401,10 +478,11 @@ The comparison also narrows what is at issue. On Bridge, their F, which is mean 
 6. ~~Sensitivity analysis: which basins are High under every assumption, and which flip~~ **done**, see `04_sensitivity.ipynb`. 140 basins are High under all six parameter combinations, 17 flip, 80 never are. Median threshold spread 1.70 mm/hr
 7. ~~Delivery~~ **done**, live map on Cloudflare Pages, reading a manifest plus one GeoJSON per fire
 8. ~~A second fire, through a single configuration-driven notebook~~ **done**, Line Fire 2024, see `05_generalized_pipeline.ipynb`
-9. Compare Line against its published USGS assessment
-10. A fire in different fuels (Park Fire 2024) to test whether the over-warning depends on fuel type
+9. ~~A third fire in different fuels, terrain and season~~ **done**, Borel Fire 2024, southern Sierra foothills. Over-warning holds in direction on all three fires
+10. Compare Line and Borel against their published USGS assessments
 11. Test the leading hypothesis for the 4.11 mm/hr terrain residual: USGS summarising over stream segments rather than catchment polygons
-12. On-demand runs: a user supplies a perimeter and dates, a job runs the pipeline and adds the result to the map
+12. Separate the over-warning rate from the width of the parameter envelope it is measured against, so the shares are comparable between fires
+13. On-demand runs: a user supplies a perimeter and dates, a job runs the pipeline and adds the result to the map
 
 ## References and attribution
 
@@ -415,10 +493,11 @@ The comparison also narrows what is at issue. On Bridge, their F, which is mean 
 - USGS 3DEP 1/3 arc-second elevation
 - USDA NRCS Soil Data Access, STATSGO2
 - CAL FIRE FRAP historic fire perimeters
-- USDA Forest Service BAER Soil Burn Severity Classification, national mosaic, used as the field-validated severity anchor for both fires
+- USDA Forest Service BAER Soil Burn Severity Classification, national mosaic, used as the field-validated severity anchor for all three fires
 - USGS Landslide Hazards Program, *Scientific Background* for the emergency assessment of post-fire debris-flow hazards, source of the five equal-interval likelihood classes: https://landslides.usgs.gov/hazards/postfire_debrisflow/background2016.php
 - Staley, D.M., Gartner, J.E., Smoczyk, G.M., Reeves, R.R. (2013). Emergency assessment of post-fire debris-flow hazards for the 2013 Mountain fire, southern California. U.S. Geological Survey Open-File Report 2013-1249. An example of the five-class likelihood display: https://pubs.usgs.gov/of/2013/1249
 - Line Fire final acreage, containment history and the Bear Creek flare-up: CAL FIRE incident page, InciWeb daily updates, and San Bernardino County incident information
+- Borel Fire final acreage and growth history: CAL FIRE incident page and InciWeb daily updates. The fire reached 59,288 acres by 1 August 2024 and was not fully contained until 15 September
 
 ## Setup
 
