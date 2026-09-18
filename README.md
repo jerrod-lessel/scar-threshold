@@ -10,9 +10,9 @@
 
 After a wildfire, a short burst of rain can turn a burned hillside into a fast slurry of mud and rock. It usually happens in the first winter, and often from a storm that would be unremarkable on unburned ground.
 
-This pipeline takes satellite imagery, elevation and soil data for a burn scar, splits the terrain into drainage basins, and reports for each one the rainfall intensity that gives it a 50% chance of producing a debris flow. It has been run on three 2024 California fires, Bridge, Line and Borel: 647 basins, all from public data, running end to end in a browser from a single configuration block.
+This pipeline takes satellite imagery, elevation and soil data for a burn scar, splits the terrain into drainage basins, and reports for each one the rainfall intensity that gives it a 50% chance of producing a debris flow. It's been run on three 2024 California fires, Bridge, Line and Borel: 647 basins, all from public data, running end to end in a browser from a single configuration block.
 
-The model is not the contribution. USGS publishes both the equations and a reference implementation. What this project offers is the ingest, the validation and the delivery, plus an uncertainty analysis that operational assessments do not publish.
+The model is not the contribution. USGS publishes both the equations and a reference implementation. What this project offers is the ingest, the validation, and the delivery, plus an uncertainty analysis that operational assessments do not typically publish.
 
 ## Four results
 
@@ -61,7 +61,7 @@ pip install -r requirements.txt
 python -m pytest -q          # 184 passed
 ```
 
-Or open `00_model_driver.ipynb` in Colab, which clones this repository and runs everything. To run a fire, open `05_generalized_pipeline.ipynb`, fill in the configuration block at the top, and run it top to bottom. That takes considerably longer, since it reads satellite imagery and queries four external services.
+Or open `00_model_driver.ipynb` in Colab, which clones this repository and runs everything. To run a fire, open `05_generalized_pipeline.ipynb`, fill in the configuration block at the top, and run it top to bottom (with a quick loop back after cell 4 to select the desired pre-/post-burn dates). It can take a bit of time, since it reads satellite imagery and queries four external services.
 
 ## More
 
