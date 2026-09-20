@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-17",
+  "generated": "2026-09-20",
   "fires": [
     {
       "id": "bridge_2024",
@@ -86,6 +86,35 @@
         "never": 157,
         "always": 45,
         "sometimes": 37
+      }
+    },
+    {
+      "id": "plaskett_2026",
+      "name": "Plaskett Fire",
+      "year": 2026,
+      "state": "CA",
+      "ignition": "2026-08-26",
+      "area_km2": 121.9,
+      "center": [
+        -121.385,
+        35.9232
+      ],
+      "bounds": [
+        -121.4856,
+        35.8435,
+        -121.2797,
+        35.9938
+      ],
+      "basins": 109,
+      "data": "data/plaskett_2026.geojson",
+      "severity_source": "Sentinel-2 dNBR, 2026-07-21 to 2026-09-19",
+      "has_baer_anchor": false,
+      "median_threshold_mm_hr": 24.3,
+      "envelope_spread_mm_hr": 5.21,
+      "stability": {
+        "never": 60,
+        "always": 37,
+        "sometimes": 12
       }
     }
   ]
