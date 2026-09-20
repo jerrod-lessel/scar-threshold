@@ -17,7 +17,19 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet">
-<link href="style.css?v=7" rel="stylesheet">
+<link href="style.css?v=8" rel="stylesheet">
+<style>
+  /* Standing note, not tied to any one fire. Quieter than the panel text on
+     purpose: it is reference material, not something to read on every visit. */
+  .about .disclaimer {
+    margin-top: 1em;
+    padding-top: 0.9em;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 0.92em;
+    opacity: 0.78;
+  }
+  .about .disclaimer strong { opacity: 0.95; }
+</style>
 </head>
 <body>
 
@@ -64,19 +76,34 @@
       50% chance of producing a debris flow.</p>
       <p>The model implementation matches the official USGS package exactly, and
       reproduces the published USGS assessment for the Bridge Fire to floating
-      point precision when given their inputs. Compared against field-mapped soil
-      burn severity, this pipeline runs conservative on both fires here: it
-      over-warns rather than under-warns.</p>
+      point precision when given their inputs. Three of the fires here have been
+      compared against field-mapped soil burn severity, and on all three this
+      pipeline runs conservative: it over-warns rather than under-warns.</p>
+      <p>A fire that BAER has not yet assessed still gets a map, because the
+      rainfall that matters arrives before the field survey does. Those fires are
+      labelled, and their numbers carry an uncertainty range but no accuracy
+      check.</p>
       <p>"High" means at least a 60% chance, which is where the top two of the
       five likelihood classes USGS publishes begin.</p>
       <p><a href="https://github.com/jerrod-lessel/scar-threshold">Code and
       full method</a></p>
+
+      <p class="disclaimer"><strong>Not an operational warning product.</strong>
+      This is a portfolio project. It reproduces a published USGS model from
+      public data and has not been reviewed or endorsed by USGS, CAL FIRE, the US
+      Forest Service or any other agency. Nothing here predicts whether a
+      particular canyon will produce a debris flow, and it must not be used for
+      evacuation, access or any other safety decision. For official post-fire
+      hazard information see the
+      <a href="https://landslides.usgs.gov/hazards/postfire_debrisflow/"
+         target="_blank" rel="noopener">USGS Landslide Hazards Program</a>
+      and your county emergency management agency.</p>
     </details>
 
   </div>
 </aside>
 
 <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
-<script src="app.js?v=7"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>
