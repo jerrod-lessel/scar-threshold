@@ -2,7 +2,7 @@
 
 Full method, validation and results for **Scar Threshold**. The short version, with the live map, is in [README.md](README.md).
 
-**Status:** complete pipeline, run end to end on three 2024 fires (Bridge, Line, and Borel) through a single configuration-driven notebook. Model implementation cross-validated against the official USGS package on every fire. 184 tests passing.
+**Status:** complete pipeline, run end to end on four fires through a single configuration-driven notebook. Three 2024 fires (Bridge, Line, and Borel) have a published BAER soil burn severity map and form the validation set. A fourth, the 2026 Plaskett Fire, was run three days from containment with no field data in existence, which is a different exercise and is reported separately. Model implementation cross-validated against the official USGS package on every fire. 184 tests passing.
 
 ---
 
@@ -218,6 +218,49 @@ Two things are likely to be in the way, and neither has been tested.
 
 The percentages are shares of basins, not of burned area. Three fires from the same year, all in California, show a pattern rather than a rule.
 
+## Running a fire before the field data exists: Plaskett 2026
+
+The three fires above are a validation study. Each has a published BAER map, each was run long after the fact, and the question they answer is whether the pipeline is right. The Plaskett Fire asks a different question: can this be used at all, in the window where a rainfall threshold could still change a decision?
+
+That window is narrow. BAER maps publish weeks to months after a fire, and the first winter storms do not wait. A tool that needs the field survey before it can say anything arrives after the decisions have been made. So Plaskett was run on 20 September 2026, with the fire at 97% containment and no BAER assessment in existence.
+
+**Nothing in this section is validated.** The six-run parameter envelope still computes and is still worth having, because it is the uncertainty of the estimate. What is missing is the accuracy check, the one thing that says which direction the pipeline errs. The honest framing is that on the three fires with an anchor this pipeline over-warned and did not meaningfully under-warn, so these numbers are more likely cautious than optimistic. That is a track record, not a check on this fire.
+
+**The fire.** Started 26 August 2026 in Los Padres National Forest, southern Monterey County, about 34 miles southwest of Big Sur. Chaparral on the coastal hillsides, timber in the drainages, oak grassland along the eastern flank. The perimeter stopped growing around 8 September while containment climbed from 47% to 97%, and full containment was projected for 1 October.
+
+**Inputs**
+
+| | Value |
+|---|---|
+| Perimeter | NIFC WFIGS year-to-date, 121.9 km² (published 29,993 acres) |
+| Pre-fire scene | Sentinel-2A, 21 July 2026, no cloud over the burn |
+| Post-fire scene | Sentinel-2A, 19 September 2026, no cloud over the burn |
+| Tiles | 10SFE, a single tile covering the whole perimeter |
+| dNBR offset correction | -40.99, from 298,771 unburned pixels |
+| Elevation | USGS 3DEP 10 m, -0.7 m to 1,293 m |
+| Soil | USDA STATSGO, 6 map units, basin S 0.239 to 0.403 |
+| BAER anchor | none published |
+
+**Choosing the scenes.** The marine layer is the constraint on this coast, not smoke or snow. Of five candidate post-fire dates, three carried real cloud inside the perimeter and one returned two granules from two different satellites. The 19 September scene arrived overnight during the work and paired cleanly with a 21 July pre-fire scene on the same satellite. The offset correction came out at -40.99, the largest of the four fires, which is two months of coastal grass curing between a July and a late-September scene. The unburned ring retained 77.9% of its pixels, the lowest of the four, because fog and ocean between them eat the SCL vegetation classes.
+
+**Results.** 109 basins, covering 90.8% of the burn area. 73.8% of the burn is moderate or high severity by dNBR, the most severe of the four fires, with 29.3% in the high class. 65.1% of the burn is 23 degrees or steeper. The median basin needs **24.3 mm/hr**, with a median envelope spread of 5.21 mm/hr. At 24 mm/hr, 37 basins are High under every parameter combination, 12 flip, and 60 are never High. The model implementation matched `pfdf` at 0.000e+00 across 654 forward evaluations and 109 inverse solves, as on the other three fires.
+
+### Three failure modes the inland retrospective fires could not expose
+
+**The perimeter source has to change for a current fire.** CAL FIRE FRAP is a historic layer published on a lag and holds nothing from the current season. Querying it for Plaskett returned three older fires of the same name, from 2000, 2010, and 2020. Worse, the service cascade accepted the first source that returned any rows at all, so a right-name wrong-year match won and the current-season service was never reached. Two changes followed. The NIFC WFIGS year-to-date service was added as a source, and a result set whose years all miss the target year is now rejected so the search continues. WFIGS has no year column, so the year is derived from `attr_FireDiscoveryDateTime`, and the same field set also carries live containment status, which the web map uses to label a fire that is still burning.
+
+**Open water breaks terrain conditioning, and the error runs toward under-warning.** Plaskett is the first coastal fire in this project. The DEM window includes a large wedge of Pacific Ocean, which is perfectly flat, so the flat-resolution step invents drainage across it: 28.7% of cells altered, against 0.8% on Bridge and 0.4% on Borel. Routing itself is fine, since water reaching the sea is correct behaviour. The damage is to the basin statistics. T is the fraction of a basin that is steep and badly burned, and F is its mean dNBR, so an ocean cell counts in the denominator and never in the numerator. Both terms are diluted, the threshold rises, and the basin is reported as **safer than it is**. Four coastal basins were between 58% and 82% ocean, all of them rated never or sometimes High, all of them in the drainages above Highway 1. A land clip now removes cells at or below 1 m elevation from the basin grid before any statistic is computed. It moved 9.19 km² out of the basins and shifted two of them into the High class at the reference storm. This is the only systematic error in the under-warning direction found anywhere in the project, and it is a terrain artifact rather than anything in the model.
+
+**`basin_attributes` assumed dense basin ids.** It sizes its bincounts as `len(records) + 1`, which is correct only when ids run 1 to N with no gaps. Delineation always produced dense ids, so the assumption was never tested. Clipping to land leaves gaps, and the function raised an IndexError on the first id past the end. It is now called with a dense id range covering the maximum, and empty ids are filtered out afterwards.
+
+### What this section does not claim
+
+Plaskett is not a fourth data point in the over-warning result. It has no anchor, so it cannot be compared against anything, and it is deliberately kept out of the three-fire table above.
+
+It is also a fire that had not finished burning. The perimeter was final, but unburned islands inside it were still being consumed, so the severity behind these numbers is a snapshot rather than a settled picture. The web map labels it as such, and the manifest carries both `has_baer_anchor: false` and a `fire_status` block so the page can say which fires have been checked and which have not.
+
+Rerunning after the fire is out, and again once BAER publishes, would give two things this project does not otherwise have: a scene-date sensitivity axis measured on the same fire, and a fourth anchor comparison.
+
 ## The model
 
 The M1 likelihood model from Staley and others (2017):
@@ -426,6 +469,10 @@ Note that the STATSGO spatial data lives in the `gsmmupolygon` table. The conven
 
 **BAER anchor severity is clipped to the fire perimeter.** The BAER national mosaic shows every assessed fire in a region, without labelling which pixel belongs to which fire, and basins extend outside the perimeter to capture their full upstream area. Without the clip, an edge basin can pick up severity from a neighbouring, older fire. On Line, an older burn scar to the southeast sat inside several edge basins and produced 4 of 5 apparent under-warnings; one basin had 46% of its area in that scar. With the clip, those four disappear and the over-warning count does not change. On Bridge the clip removed 0.05 km² of BAER severity from inside basins and moved 18 thresholds by at most 0.2 mm/hr, with no basin changing its agreement class. On Borel it removed 0.02 km², despite the 2021 French Fire scar and three same-season fires on the same forest sitting nearby in the mosaic. The rule is cheap and correct to keep, and it is load bearing on some fires and not on others. dNBR is not clipped: it measures change between the two scene dates, so an old neighbouring scar reads as roughly zero change anyway.
 
+**Basins are clipped to land before any statistic is computed.** Cells at or below 1 m elevation are removed from the basin label grid. This is a no-op on an inland fire and load bearing on a coastal one: see the Plaskett section for what it fixes and why the error it removes runs toward under-warning. The clip happens after routing, deliberately, because water draining to the sea is correct and only the per-basin statistics are wrong.
+
+**The perimeter source depends on how old the fire is.** CAL FIRE FRAP is authoritative for California and is used whenever it has the fire, but it is historic and published on a lag, so a current-season fire is not in it. NIFC WFIGS year-to-date is queried for those. A result set matching the fire name but not the target year is rejected rather than accepted, because fire names repeat across decades and the first source returning rows would otherwise win.
+
 **The perimeter search guards are built, not typed.** The configuration takes the fire's rough centre and published acreage from the incident page. The notebook builds a search box 0.3 degrees around the centre and accepts a perimeter between half and double the published area. These only decide whether a perimeter query result is trusted, and never change the results.
 
 ## Testing
@@ -460,9 +507,13 @@ The comparison also narrows what is at issue. On Bridge, their F, which is mean 
 
 **Likelihood only.** The Gartner (2014) volume model and the combined hazard classification are not implemented, so this says how likely a debris flow is, not how big.
 
-**Three fires, one scene pair each.** All three are 2024 California fires. Scene choice is not yet a sensitivity axis. The over-warning found against BAER held in direction on all three, including on a fire chosen to differ in range, season, fuels and steepness, but its size ranges from 14% to 37% of basins with no identified cause. The reading that two fires suggested, that the over-warning tracks the satellite-versus-field severity gap and is therefore a chaparral effect, does not survive the third: Borel has the largest severity gap and a middling over-warning share. See the three-fire results section for the two untested explanations.
+**Three validated fires, one scene pair each.** All three are 2024 California fires. Scene choice is not yet a sensitivity axis. The over-warning found against BAER held in direction on all three, including on a fire chosen to differ in range, season, fuels and steepness, but its size ranges from 14% to 37% of basins with no identified cause. The reading that two fires suggested, that the over-warning tracks the satellite-versus-field severity gap and is therefore a chaparral effect, does not survive the third: Borel has the largest severity gap and a middling over-warning share. See the three-fire results section for the two untested explanations.
 
 **The over-warning shares are not measured against a fixed yardstick.** A basin counts as over-warned when its BAER threshold falls above the whole six-run parameter envelope, so the count depends on how wide that envelope is, which varies by a factor of three across the three fires. The shares are therefore comparable in direction but not in magnitude.
+
+**The fourth fire is unvalidated and was still burning.** Plaskett has no BAER map, so nothing about its accuracy is known, and its perimeter was final while unburned islands inside it were still being consumed. Its numbers are an estimate with an uncertainty range attached, and the map says so. See the Plaskett section.
+
+**Coastal fires need the land clip, and it is a blunt instrument.** Sea is identified by elevation at or below 1 m. On a cliffed coast like Big Sur that separates ocean from land cleanly, and the 28.6% of the DEM window it caught matched the 28.7% of cells the conditioning step altered. On a flatter coast the same rule would eat real low-lying land, and the threshold would need lowering. No fire in this project has tested that case.
 
 **The percentages are shares of basins.** Basins differ in size, so "37% of basins" is not "37% of burned area".
 
@@ -479,10 +530,12 @@ The comparison also narrows what is at issue. On Bridge, their F, which is mean 
 7. ~~Delivery~~ **done**, live map on Cloudflare Pages, reading a manifest plus one GeoJSON per fire
 8. ~~A second fire, through a single configuration-driven notebook~~ **done**, Line Fire 2024, see `05_generalized_pipeline.ipynb`
 9. ~~A third fire in different fuels, terrain and season~~ **done**, Borel Fire 2024, southern Sierra foothills. Over-warning holds in direction on all three fires
-10. Compare Line and Borel against their published USGS assessments
-11. Test the leading hypothesis for the 4.11 mm/hr terrain residual: USGS summarising over stream segments rather than catchment polygons
-12. Separate the over-warning rate from the width of the parameter envelope it is measured against, so the shares are comparable between fires
-13. On-demand runs: a user supplies a perimeter and dates, a job runs the pipeline and adds the result to the map
+10. ~~Run a fire before its BAER map exists, to test whether the pipeline is usable in the window that matters~~ **done**, Plaskett Fire 2026, run at 97% containment with no anchor. Exposed three failure modes the inland retrospective fires could not
+11. Rerun Plaskett after full containment and again once BAER publishes: a scene-date sensitivity axis on one fire, plus a fourth anchor comparison
+12. Compare Line and Borel against their published USGS assessments
+13. Test the leading hypothesis for the 4.11 mm/hr terrain residual: USGS summarising over stream segments rather than catchment polygons
+14. Separate the over-warning rate from the width of the parameter envelope it is measured against, so the shares are comparable between fires
+15. On-demand runs: a user supplies a perimeter and dates, a job runs the pipeline and adds the result to the map
 
 ## References and attribution
 
@@ -493,6 +546,7 @@ The comparison also narrows what is at issue. On Bridge, their F, which is mean 
 - USGS 3DEP 1/3 arc-second elevation
 - USDA NRCS Soil Data Access, STATSGO2
 - CAL FIRE FRAP historic fire perimeters
+- NIFC WFIGS Interagency Fire Perimeters, year to date, used for current-season fires that FRAP does not yet carry
 - USDA Forest Service BAER Soil Burn Severity Classification, national mosaic, used as the field-validated severity anchor for all three fires
 - USGS Landslide Hazards Program, *Scientific Background* for the emergency assessment of post-fire debris-flow hazards, source of the five equal-interval likelihood classes: https://landslides.usgs.gov/hazards/postfire_debrisflow/background2016.php
 - Staley, D.M., Gartner, J.E., Smoczyk, G.M., Reeves, R.R. (2013). Emergency assessment of post-fire debris-flow hazards for the 2013 Mountain fire, southern California. U.S. Geological Survey Open-File Report 2013-1249. An example of the five-class likelihood display: https://pubs.usgs.gov/of/2013/1249
@@ -507,3 +561,13 @@ python -m pytest -q
 ```
 
 Or open a notebook in Colab, which clones this repository and runs everything. `00_model_driver.ipynb` is the quick demonstration. `05_generalized_pipeline.ipynb` runs any fire from perimeter to web export and takes considerably longer, since it reads satellite imagery and queries four external services.
+
+---
+
+## Disclaimer
+
+This is a portfolio project, not an operational warning product. It reproduces a published USGS model from public data and has not been reviewed or endorsed by USGS, CAL FIRE, the US Forest Service, or any other agency.
+
+Nothing here predicts whether a particular canyon will produce a debris flow, and none of it should be used for evacuation, access, or any other safety decision. A basin shown as not high hazard has not been judged safe: it means the model did not rate it high under any of six parameter choices, which is a much narrower claim.
+
+For official post-fire hazard information see the [USGS Landslide Hazards Program](https://landslides.usgs.gov/hazards/postfire_debrisflow/) and your county emergency management agency.
