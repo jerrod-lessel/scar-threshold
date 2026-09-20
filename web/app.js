@@ -43,7 +43,8 @@ const LEGEND_CAPTIONS = {
     "<b>The question:</b> in a 24 mm/hr storm lasting 15 minutes, is a debris " +
     "flow at least 60% likely? Red, yes, however we set our assumptions. " +
     "Purple, only under some. Grey, never. 60% is where the top two of USGS's " +
-    "five likelihood classes begin.",
+    "five likelihood classes begin. Grey does not mean safe: it means the model " +
+    "did not rate the basin high under any of the six.",
 };
 
 /* ---- Caveats that belong on the page, not just in the manifest ----------- */
@@ -100,36 +101,6 @@ function activeFireNote(fire) {
     .site-note.active    { border-left-color: #ff8a3d; }
     .site-note b { font-weight: 600; }
     .fire-flag { font-size: 11px; opacity: 0.75; }`;
-  document.head.appendChild(css);
-})();
-
-/* ---- Disclaimer ---------------------------------------------------------- */
-
-// Shown under every fire. Somebody who never opens the README ends up here
-// instead, and "not high under six parameter runs" is a far narrower claim than
-// "safe". The last sentence does the most work: it gives a reader the correct
-// next step rather than only deflecting.
-const DISCLAIMER =
-  "<b>Not an operational warning product.</b> This is a portfolio project. It " +
-  "reproduces a published USGS model from public data and has not been reviewed " +
-  "or endorsed by USGS, CAL FIRE, the US Forest Service or any other agency. " +
-  "Nothing here predicts whether a particular canyon will produce a debris flow, " +
-  "and it must not be used for evacuation, access or any other safety decision. " +
-  "A basin shown as not high hazard has not been judged safe: it means the model " +
-  "did not rate it high under any of six parameter choices. For official " +
-  "post-fire hazard information see the " +
-  "<a href=\"https://landslides.usgs.gov/hazards/postfire_debrisflow/\" " +
-  "target=\"_blank\" rel=\"noopener\">USGS Landslide Hazards Program</a> " +
-  "and your county emergency management agency.";
-
-(function injectDisclaimerStyles() {
-  const css = document.createElement("style");
-  css.textContent = `
-    .disclaimer { font-size: 11px; line-height: 1.5; margin: 14px 0 0;
-                  padding: 10px 0 0; border-top: 1px solid rgba(255,255,255,0.12);
-                  opacity: 0.72; }
-    .disclaimer b { font-weight: 600; opacity: 0.9; }
-    .disclaimer a { color: inherit; }`;
   document.head.appendChild(css);
 })();
 
@@ -299,9 +270,6 @@ function drawFireNotices(fire) {
   parts.push(
     `<p class="site-note${checked ? "" : " unchecked"}">${ANCHOR_NOTES[checked]}</p>`
   );
-
-  // Always last, after any fire-specific caveats.
-  parts.push(`<p class="disclaimer">${DISCLAIMER}</p>`);
 
   box.innerHTML = parts.join("");
 }
