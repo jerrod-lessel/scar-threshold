@@ -103,6 +103,36 @@ function activeFireNote(fire) {
   document.head.appendChild(css);
 })();
 
+/* ---- Disclaimer ---------------------------------------------------------- */
+
+// Shown under every fire. Somebody who never opens the README ends up here
+// instead, and "not high under six parameter runs" is a far narrower claim than
+// "safe". The last sentence does the most work: it gives a reader the correct
+// next step rather than only deflecting.
+const DISCLAIMER =
+  "<b>Not an operational warning product.</b> This is a portfolio project. It " +
+  "reproduces a published USGS model from public data and has not been reviewed " +
+  "or endorsed by USGS, CAL FIRE, the US Forest Service or any other agency. " +
+  "Nothing here predicts whether a particular canyon will produce a debris flow, " +
+  "and it must not be used for evacuation, access or any other safety decision. " +
+  "A basin shown as not high hazard has not been judged safe: it means the model " +
+  "did not rate it high under any of six parameter choices. For official " +
+  "post-fire hazard information see the " +
+  "<a href=\"https://landslides.usgs.gov/hazards/postfire_debrisflow/\" " +
+  "target=\"_blank\" rel=\"noopener\">USGS Landslide Hazards Program</a> " +
+  "and your county emergency management agency.";
+
+(function injectDisclaimerStyles() {
+  const css = document.createElement("style");
+  css.textContent = `
+    .disclaimer { font-size: 11px; line-height: 1.5; margin: 14px 0 0;
+                  padding: 10px 0 0; border-top: 1px solid rgba(255,255,255,0.12);
+                  opacity: 0.72; }
+    .disclaimer b { font-weight: 600; opacity: 0.9; }
+    .disclaimer a { color: inherit; }`;
+  document.head.appendChild(css);
+})();
+
 const state = { view: "threshold", manifest: null, fire: null,
                 hovered: null, locked: null };
 
@@ -269,6 +299,9 @@ function drawFireNotices(fire) {
   parts.push(
     `<p class="site-note${checked ? "" : " unchecked"}">${ANCHOR_NOTES[checked]}</p>`
   );
+
+  // Always last, after any fire-specific caveats.
+  parts.push(`<p class="disclaimer">${DISCLAIMER}</p>`);
 
   box.innerHTML = parts.join("");
 }
