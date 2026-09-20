@@ -46,6 +46,63 @@ const LEGEND_CAPTIONS = {
     "five likelihood classes begin.",
 };
 
+/* ---- Caveats that belong on the page, not just in the manifest ----------- */
+
+// Two things can make a fire's numbers less settled than the map implies, and
+// they are independent. A fire can be long out and still have no BAER map, and
+// a fire can be freshly mapped and still be burning. Both are stated separately
+// so a reader knows which one applies.
+
+// 1. Has anyone checked the satellite severity against field observation?
+const ANCHOR_NOTES = {
+  true:
+    "<b>Field checked.</b> Every basin was rerun using the BAER soil burn " +
+    "severity map instead of satellite severity, and the result is in each " +
+    "basin's readout.",
+  false:
+    "<b>No field check yet.</b> BAER has not published a soil burn severity " +
+    "map for this fire, so these thresholds carry an uncertainty range but no " +
+    "accuracy check. On the three fires that do have one, this pipeline " +
+    "over-warned and did not meaningfully under-warn, so these numbers are " +
+    "more likely cautious than optimistic. That is a track record, not a " +
+    "check on this fire.",
+};
+
+// 2. Had the fire finished burning when the satellite looked at it?
+// A perimeter can stop growing while unburned islands inside it keep being
+// consumed, so severity is still filling in and every number here is a snapshot.
+function activeFireNote(fire) {
+  const st = fire.fire_status;
+  if (!st || st.state !== "active") return null;
+
+  const pct = st.percent_contained != null
+    ? `${st.percent_contained}% contained`
+    : "not fully contained";
+  const asOf = st.as_of ? ` as of ${st.as_of}` : "";
+  const scene = fire.severity_source ? ` Severity was measured from ${fire.severity_source}.` : "";
+
+  return `<b>Still burning.</b> This fire was ${pct}${asOf}. The perimeter has ` +
+    `stopped growing, but unburned islands inside it are still being consumed, ` +
+    `so the burn severity behind these numbers is a snapshot rather than a ` +
+    `final picture.${scene} Expect the map to change when it is rerun after the ` +
+    `fire is out.`;
+}
+
+// Injected here rather than added to style.css, so this change touches one file.
+(function injectNoticeStyles() {
+  const css = document.createElement("style");
+  css.textContent = `
+    .site-note { font-size: 12px; line-height: 1.5; margin: 8px 0 0;
+                 padding: 8px 10px; border-left: 2px solid #3a5567;
+                 background: rgba(255,255,255,0.03); }
+    .site-note + .site-note { margin-top: 6px; }
+    .site-note.unchecked { border-left-color: #ffc857; }
+    .site-note.active    { border-left-color: #ff8a3d; }
+    .site-note b { font-weight: 600; }
+    .fire-flag { font-size: 11px; opacity: 0.75; }`;
+  document.head.appendChild(css);
+})();
+
 const state = { view: "threshold", manifest: null, fire: null,
                 hovered: null, locked: null };
 
@@ -160,6 +217,8 @@ function showBasin(props, locked = false) {
     props.thr_min != null && props.thr_max != null
       ? `${fmt(props.thr_min)} to ${fmt(props.thr_max)} depending on assumptions`
       : "";
+  // Omitted entirely for a fire with no BAER map, rather than shown as n/a:
+  // an empty row invites the reader to wonder what went wrong.
   const baer =
     props.baer_threshold != null
       ? `<dt>Field-checked severity</dt><dd>${fmt(props.baer_threshold)} mm/hr</dd>`
@@ -183,6 +242,35 @@ function showBasin(props, locked = false) {
       <dt>Certainty</dt><dd>${props.stability ?? "n/a"}</dd>
       ${baer}
     </dl>`;
+}
+
+/* ---- Per-fire notices ---------------------------------------------------- */
+
+// Rebuilt on every fire change. The container is created once, after #fireMeta,
+// so no change to index.html is needed.
+function drawFireNotices(fire) {
+  const meta = document.getElementById("fireMeta");
+  let box = document.getElementById("fireNotices");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "fireNotices";
+    meta.insertAdjacentElement("afterend", box);
+  }
+
+  const parts = [];
+
+  const active = activeFireNote(fire);
+  if (active) parts.push(`<p class="site-note active">${active}</p>`);
+
+  // A manifest entry written before this flag existed has no opinion, so treat
+  // the absent case as checked. The failure mode is then a missing note on a
+  // validated fire, not a false warning on one.
+  const checked = fire.has_baer_anchor !== false;
+  parts.push(
+    `<p class="site-note${checked ? "" : " unchecked"}">${ANCHOR_NOTES[checked]}</p>`
+  );
+
+  box.innerHTML = parts.join("");
 }
 
 /* ---- Data loading -------------------------------------------------------- */
@@ -228,6 +316,7 @@ async function loadFire(fire) {
     `Typical basin needs ${fire.median_threshold_mm_hr} mm/hr. ` +
     (s.always ? `${s.always} basins are high hazard whatever we assume.` : "");
 
+  drawFireNotices(fire);
   applyView();
 }
 
@@ -293,6 +382,15 @@ function wireInteraction() {
 
 /* ---- Boot ---------------------------------------------------------------- */
 
+// Flags shown in the dropdown, so the caveat is visible before the map loads
+// rather than only after a fire has been picked.
+function fireOptionLabel(f) {
+  const flags = [];
+  if (f.fire_status && f.fire_status.state === "active") flags.push("still burning");
+  if (f.has_baer_anchor === false) flags.push("no field check yet");
+  return `${f.name}, ${f.year}` + (flags.length ? `  (${flags.join(", ")})` : "");
+}
+
 async function boot() {
   const res = await fetch("data/fires.json");
   if (!res.ok) throw new Error(`Could not load the fire list (${res.status})`);
@@ -302,7 +400,7 @@ async function boot() {
   state.manifest.fires.forEach((f, i) => {
     const opt = document.createElement("option");
     opt.value = String(i);
-    opt.textContent = `${f.name}, ${f.year}`;
+    opt.textContent = fireOptionLabel(f);
     sel.appendChild(opt);
   });
   sel.disabled = state.manifest.fires.length < 2;
